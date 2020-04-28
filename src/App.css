@@ -60,6 +60,10 @@
 .button-control {
     cursor: pointer;
 }
+.disabled {
+    background-color: gray !important;
+    cursor: none !important;
+}
 
 .red {
     background-color: red;

@@ -48,12 +48,12 @@ const validateClicks = ({ pattern = {}, colorsClicked = [] }) => {
 };
 
 function App() {
-    const [gameStarted, setGameStarted] = useState(false);
+    const [isGameStarted, setIsGameStarted] = useState(false);
     const [winOrLoss, setWinOrLoss] = useState(null);
     const [isFlashing, setIsFlashing] = useState({});
     const [pattern, setPattern] = useState({});
     const [colorsClicked, setColorsClicked] = useState([]);
-    const [patternDisplayed, setPatternDisplayed] = useState(null);
+    const [isPatternDisplayed, setIsPatternDisplayed] = useState(false);
 
     useEffect(() => {
         if (!isEmpty(pattern)) {
@@ -66,7 +66,7 @@ function App() {
             const currentPatternIndex = Number(Object.keys(isFlashing));
 
             if (currentPatternIndex === Object.values(pattern).length - 1) {
-                setPatternDisplayed(prevState => true);
+                setIsPatternDisplayed(prevState => true);
                 return;
             } else {
                 flash({ isFlashing, pattern });
@@ -75,7 +75,7 @@ function App() {
     }, [isFlashing]);
 
     useEffect(() => {
-        if (gameStarted && winOrLoss === null) {
+        if (isGameStarted && winOrLoss === null) {
             const timeoutId = setTimeout(params => {
                 setWinOrLoss(prevState => false);
             }, 8000);
@@ -83,7 +83,7 @@ function App() {
                 clearTimeout(timeoutId);
             };
         }
-    }, [gameStarted, winOrLoss]);
+    }, [isGameStarted, winOrLoss]);
 
     useEffect(() => {
         if (!!colorsClicked.length && !isEmpty(pattern) && winOrLoss === null) {
@@ -101,17 +101,27 @@ function App() {
         }, 500);
     };
 
-    const getButtonControlClassName = ({ color = "" }) => {
+    const getButtonControlClassName = ({
+        color = "",
+        isGameStarted,
+        isPatternDisplayed
+    }) => {
         return `button-control ${color} ${
             Object.values(isFlashing)[0] === color ? "isFlashing" : null
         }`;
     };
+    const getPlayButtonClasName = ({ isGameStarted, isPatternDisplayed }) => {
+        return `play font-family ${
+            isGameStarted && !isPatternDisplayed ? "disabled" : null
+        }`;
+    };
+
     const handlePlayClick = () => {
-        if (!gameStarted) {
+        if (!isGameStarted) {
             setPattern(generatePattern({}));
-            setGameStarted(true);
+            setIsGameStarted(true);
         } else {
-            setGameStarted(false);
+            setIsGameStarted(false);
             setWinOrLoss(null);
         }
     };
@@ -120,7 +130,7 @@ function App() {
         setColorsClicked(prevState => [...prevState, color]);
     };
 
-    const getHeading = ({ winOrLoss }) => {
+    const renderHeadingText = ({ winOrLoss }) => {
         let text;
         switch (winOrLoss) {
             case null:
@@ -136,20 +146,48 @@ function App() {
         return text;
     };
 
+    const renderPlayButtonText = ({
+        isGameStarted,
+        isPatternDisplayed,
+        winOrLoss
+    }) => {
+        let text;
+        switch (true) {
+            case !isGameStarted && !isPatternDisplayed:
+                text = "Start Play";
+                break;
+            case isGameStarted && !isPatternDisplayed:
+                text = "Please Wait";
+                break;
+            case isGameStarted && winOrLoss === false:
+                text = "Play Again!";
+                break;
+            default:
+                text = "Play";
+                break;
+        }
+        return text;
+    };
+
     return (
         <div className="App">
             <header className="App-header font-family">
                 Simon0.2 Classic Edition
             </header>
 
-            <h2 className="font-family">{getHeading({ winOrLoss })}</h2>
+            <h2 className="font-family">{renderHeadingText({ winOrLoss })}</h2>
 
             <main className="container">
                 <section></section>
                 <section className="button-container">
                     {Object.values(colorMap).map(color => (
                         <button
-                            className={getButtonControlClassName({ color })}
+                            disabled={isGameStarted && !isPatternDisplayed}
+                            className={getButtonControlClassName({
+                                color,
+                                isGameStarted,
+                                isPatternDisplayed
+                            })}
                             key={color}
                             onClick={() => {
                                 handleColorClick({ color });
@@ -159,16 +197,17 @@ function App() {
                 </section>
                 <section>
                     <button
-                        className="play font-family"
+                        className={getPlayButtonClasName({
+                            isGameStarted,
+                            isPatternDisplayed
+                        })}
                         onClick={handlePlayClick}
                     >
-                        {!gameStarted && patternDisplayed === null
-                            ? "Start Play"
-                            : gameStarted && patternDisplayed === null
-                            ? "Please Wait"
-                            : gameStarted && winOrLoss === false
-                            ? "Play Again!"
-                            : "Play "}
+                        {renderPlayButtonText({
+                            isGameStarted,
+                            isPatternDisplayed,
+                            winOrLoss
+                        })}
                     </button>
                 </section>
             </main>
