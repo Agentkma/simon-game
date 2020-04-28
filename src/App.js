@@ -1,5 +1,6 @@
 import React, { useEffect, useState } from "react";
-import { useInterval } from "./useInterval";
+
+import { delay, isEmpty } from "lodash";
 import "./App.css";
 
 const RED = "red";
@@ -19,17 +20,24 @@ function getRandomInt(max) {
 }
 
 const generatePattern = ({ numberOfFlashes = 4 }) => {
-    const patternArray = Array.from(Array(numberOfFlashes)).map(
-        () => colorMap[getRandomInt(4)]
-    );
-    return patternArray;
+    const patternMap = {};
+    Array.from(Array(numberOfFlashes)).forEach((number, index) => {
+        if (!patternMap[index]) {
+            patternMap[index] = colorMap[getRandomInt(4)];
+        }
+    });
+
+    return patternMap;
 };
 
-const validateClicks = ({ pattern = [], colorsClicked = [] }) => {
-    if (pattern.length !== colorsClicked.length) {
+const validateClicks = ({ pattern = {}, colorsClicked = [] }) => {
+    if (colorsClicked.length < Object.values(pattern).length) {
+        return null;
+    }
+    if (colorsClicked.length > Object.values(pattern).length) {
         return false;
     }
-    const misMatches = pattern.filter(
+    const misMatches = Object.values(pattern).filter(
         (color, index) => colorsClicked[index] !== color
     );
     if (!!misMatches.length) {
@@ -42,16 +50,29 @@ const validateClicks = ({ pattern = [], colorsClicked = [] }) => {
 function App() {
     const [gameStarted, setGameStarted] = useState(false);
     const [winOrLoss, setWinOrLoss] = useState(null);
-    const [isFlashing, setIsFlashing] = useState(null);
-    const [pattern, setPattern] = useState([]);
+    const [isFlashing, setIsFlashing] = useState({});
+    const [pattern, setPattern] = useState({});
     const [colorsClicked, setColorsClicked] = useState([]);
     const [patternDisplayed, setPatternDisplayed] = useState(null);
 
     useEffect(() => {
-        if (!!pattern.length) {
-            startFlashSequence({ pattern });
+        if (!isEmpty(pattern)) {
+            setIsFlashing({ 0: pattern[0] });
         }
     }, [pattern]);
+
+    useEffect(() => {
+        if (!isEmpty(isFlashing)) {
+            const currentPatternIndex = Number(Object.keys(isFlashing));
+
+            if (currentPatternIndex === Object.values(pattern).length - 1) {
+                setPatternDisplayed(prevState => true);
+                return;
+            } else {
+                flash({ isFlashing, pattern });
+            }
+        }
+    }, [isFlashing]);
 
     useEffect(() => {
         if (gameStarted && winOrLoss === null) {
@@ -65,40 +86,25 @@ function App() {
     }, [gameStarted, winOrLoss]);
 
     useEffect(() => {
-        if (!!colorsClicked.length && !!pattern.length && winOrLoss === null) {
+        if (!!colorsClicked.length && !isEmpty(pattern) && winOrLoss === null) {
             setWinOrLoss(validateClicks({ pattern, colorsClicked }));
         }
     }, [pattern, colorsClicked, winOrLoss]);
 
-    const startFlashSequence = ({ pattern }) => {
-        return pattern.forEach((color, index) => {
-            const timeoutId = setTimeout(params => {
-                setIsFlashing(prevState => color);
-                if (index === pattern.length - 1) {
-                    setPatternDisplayed(true);
-                }
-            }, 500);
-            return params => {
-                clearTimeout(timeoutId);
-            };
-        });
+    const flash = ({ isFlashing, pattern }) => {
+        const currentPatternIndex = Number(Object.keys(isFlashing));
+        delay(() => {
+            setIsFlashing(prevState => {
+                const newPatternIndex = currentPatternIndex + 1;
+                return { [newPatternIndex]: pattern[newPatternIndex] };
+            });
+        }, 500);
     };
 
-    // LET use a patter of 4 flashes
-
-    // 4 square button with 4 colors
-    // the app will make a succession of color flashes in a pattern on these buttons
-    // that the user must then repeat by clicking on them
-    // need user input / click on these
-    // after clicking there is a sucess or fail message for the user...
-
-    // we need a way to generate the button flashes, assume random pattern
-    // we need a way to store that generated pattern so we can tell if user correctly clicked/followed the pattern
-    // then need to validate their pattern and present the success or fail messaging/visuals
-    // then we need to reset our state...this could be auto or manual through a play now button
-
-    const getClassName = ({ color = "" }) => {
-        return `${color} ${isFlashing === color ? "isFlashing" : null}`;
+    const getButtonControlClassName = ({ color = "" }) => {
+        return `button-control ${color} ${
+            Object.values(isFlashing)[0] === color ? "isFlashing" : null
+        }`;
     };
     const handlePlayClick = () => {
         if (!gameStarted) {
@@ -114,26 +120,36 @@ function App() {
         setColorsClicked(prevState => [...prevState, color]);
     };
 
+    const getHeading = ({ winOrLoss }) => {
+        let text;
+        switch (winOrLoss) {
+            case null:
+                text = "Good Luck";
+                break;
+            case true:
+                text = "You Won";
+                break;
+            default:
+                text = "Sorry, You Lost";
+                break;
+        }
+        return text;
+    };
+
     return (
         <div className="App">
             <header className="App-header font-family">
-                Dispatch Health: Interview Code Challenge
+                Simon0.2 Classic Edition
             </header>
 
-            <h2 className="font-family">
-                {winOrLoss === null
-                    ? "Good Luck"
-                    : winOrLoss
-                    ? "You Won!"
-                    : "Sorry, You Lost :("}
-            </h2>
+            <h2 className="font-family">{getHeading({ winOrLoss })}</h2>
 
             <main className="container">
                 <section></section>
                 <section className="button-container">
                     {Object.values(colorMap).map(color => (
                         <button
-                            className={getClassName({ color })}
+                            className={getButtonControlClassName({ color })}
                             key={color}
                             onClick={() => {
                                 handleColorClick({ color });
