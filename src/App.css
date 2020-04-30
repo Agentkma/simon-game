@@ -64,6 +64,9 @@
     background-color: gray !important;
     cursor: none !important;
 }
+.gameNotInPlay {
+    cursor: not-allowed !important;
+}
 
 .red {
     background-color: red;

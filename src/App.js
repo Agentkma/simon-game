@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useState, useMemo } from "react";
 
 import { delay, isEmpty } from "lodash";
 import "./App.css";
@@ -48,12 +48,12 @@ const validateClicks = ({ pattern = {}, colorsClicked = [] }) => {
 };
 
 function App() {
-    const [isGameStarted, setIsGameStarted] = useState(false);
-    const [winOrLoss, setWinOrLoss] = useState(null);
+    const [isGameInPlay, setIsGameInPlay] = useState(false);
+    const [hasWon, setHasWon] = useState(null);
     const [isFlashing, setIsFlashing] = useState({});
     const [pattern, setPattern] = useState({});
     const [colorsClicked, setColorsClicked] = useState([]);
-    const [isPatternDisplayed, setIsPatternDisplayed] = useState(false);
+    const [flashPatternFinished, setFlashPatternFinished] = useState(false);
 
     useEffect(() => {
         if (!isEmpty(pattern)) {
@@ -62,34 +62,34 @@ function App() {
     }, [pattern]);
 
     useEffect(() => {
-        if (!isEmpty(isFlashing)) {
-            const currentPatternIndex = Number(Object.keys(isFlashing));
-
-            if (currentPatternIndex === Object.values(pattern).length - 1) {
-                setIsPatternDisplayed(prevState => true);
-                return;
-            } else {
-                flash({ isFlashing, pattern });
-            }
+        const currentPatternIndex = Number(Object.keys(isFlashing));
+        if (
+            !isEmpty(isFlashing) &&
+            currentPatternIndex === Object.values(pattern).length - 1
+        ) {
+            setFlashPatternFinished(true);
+        } else {
+            flash({ isFlashing, pattern });
         }
-    }, [isFlashing]);
+    }, [isFlashing, pattern]);
 
     useEffect(() => {
-        if (isGameStarted && winOrLoss === null) {
+        if (isGameInPlay && hasWon === null) {
             const timeoutId = setTimeout(params => {
-                setWinOrLoss(prevState => false);
+                setHasWon(false);
+                setIsGameInPlay(false);
             }, 8000);
             return params => {
                 clearTimeout(timeoutId);
             };
         }
-    }, [isGameStarted, winOrLoss]);
+    }, [isGameInPlay, hasWon]);
 
     useEffect(() => {
-        if (!!colorsClicked.length && !isEmpty(pattern) && winOrLoss === null) {
-            setWinOrLoss(validateClicks({ pattern, colorsClicked }));
+        if (!isEmpty(pattern) && !!colorsClicked.length) {
+            setHasWon(validateClicks({ pattern, colorsClicked }));
         }
-    }, [pattern, colorsClicked, winOrLoss]);
+    }, [colorsClicked, pattern]);
 
     const flash = ({ isFlashing, pattern }) => {
         const currentPatternIndex = Number(Object.keys(isFlashing));
@@ -101,38 +101,39 @@ function App() {
         }, 500);
     };
 
-    const getButtonControlClassName = ({
-        color = "",
-        isGameStarted,
-        isPatternDisplayed
-    }) => {
+    const getButtonControlClassName = ({ color = "", isGameInPlay }) => {
         return `button-control ${color} ${
             Object.values(isFlashing)[0] === color ? "isFlashing" : null
-        }`;
+        } ${isGameInPlay ? null : "gameNotInPlay"}`;
     };
-    const getPlayButtonClasName = ({ isGameStarted, isPatternDisplayed }) => {
+    const getPlayButtonClasName = ({ isGameInPlay, flashPatternFinished }) => {
         return `play font-family ${
-            isGameStarted && !isPatternDisplayed ? "disabled" : null
-        }`;
+            isGameInPlay && !flashPatternFinished ? "disabled" : null
+        }  `;
     };
 
     const handlePlayClick = () => {
-        if (!isGameStarted) {
+        if (!isGameInPlay) {
             setPattern(generatePattern({}));
-            setIsGameStarted(true);
-        } else {
-            setIsGameStarted(false);
-            setWinOrLoss(null);
+            setIsGameInPlay(true);
+        }
+        if (hasWon !== null) {
+            setHasWon(null);
+            setIsGameInPlay(false);
+            setPattern({});
         }
     };
 
     const handleColorClick = ({ color = "" }) => {
-        setColorsClicked(prevState => [...prevState, color]);
+        if (isGameInPlay) {
+            setColorsClicked(prevState => [...prevState, color]);
+        }
     };
 
-    const renderHeadingText = ({ winOrLoss }) => {
+    const renderHeadingText = ({ hasWon }) => {
         let text;
-        switch (winOrLoss) {
+
+        switch (hasWon) {
             case null:
                 text = "Good Luck";
                 break;
@@ -147,19 +148,16 @@ function App() {
     };
 
     const renderPlayButtonText = ({
-        isGameStarted,
-        isPatternDisplayed,
-        winOrLoss
+        isGameInPlay,
+        flashPatternFinished,
+        hasWon
     }) => {
         let text;
         switch (true) {
-            case !isGameStarted && !isPatternDisplayed:
-                text = "Start Play";
-                break;
-            case isGameStarted && !isPatternDisplayed:
+            case isGameInPlay && !flashPatternFinished:
                 text = "Please Wait";
                 break;
-            case isGameStarted && winOrLoss === false:
+            case hasWon === true || hasWon === false:
                 text = "Play Again!";
                 break;
             default:
@@ -169,24 +167,38 @@ function App() {
         return text;
     };
 
+    const memoizedPlayButtonText = useMemo(
+        () =>
+            renderPlayButtonText({
+                isGameInPlay,
+                flashPatternFinished,
+                hasWon
+            }),
+        [isGameInPlay, flashPatternFinished, hasWon]
+    );
+
+    const memoizedHeaderText = useMemo(() => renderHeadingText({ hasWon }), [
+        hasWon
+    ]);
+
     return (
         <div className="App">
             <header className="App-header font-family">
                 Simon0.2 Classic Edition
             </header>
-
-            <h2 className="font-family">{renderHeadingText({ winOrLoss })}</h2>
-
             <main className="container">
-                <section></section>
+                <section>
+                    {" "}
+                    <h2 className="font-family">{memoizedHeaderText}</h2>
+                </section>
                 <section className="button-container">
                     {Object.values(colorMap).map(color => (
                         <button
-                            disabled={isGameStarted && !isPatternDisplayed}
+                            disabled={isGameInPlay && !flashPatternFinished}
                             className={getButtonControlClassName({
                                 color,
-                                isGameStarted,
-                                isPatternDisplayed
+                                isGameInPlay,
+                                flashPatternFinished
                             })}
                             key={color}
                             onClick={() => {
@@ -198,16 +210,12 @@ function App() {
                 <section>
                     <button
                         className={getPlayButtonClasName({
-                            isGameStarted,
-                            isPatternDisplayed
+                            isGameInPlay,
+                            flashPatternFinished
                         })}
                         onClick={handlePlayClick}
                     >
-                        {renderPlayButtonText({
-                            isGameStarted,
-                            isPatternDisplayed,
-                            winOrLoss
-                        })}
+                        {memoizedPlayButtonText}
                     </button>
                 </section>
             </main>
