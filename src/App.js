@@ -30,12 +30,6 @@ const generatePattern = ({ numberOfFlashes = 4 }) => {
   return patternMap;
 };
 
-const getButtonControlClassName = ({ color = '', flash }) => {
-  return `button-control ${color} ${
-    Object.values(flash)[0] === color ? 'flash' : null
-  }`;
-};
-
 const getPlayButtonClasName = ({ isGameStarted, isPatternDisplayed }) => {
   return `play font-family ${
     isGameStarted && !isPatternDisplayed ? 'disabled' : null
@@ -91,20 +85,18 @@ function App() {
       if (currentPatternIndex === Object.values(pattern).length - 1) {
         setIsPatternDisplayed((prevState) => true);
         return;
-      } else {
-        const flash = ({ flash, pattern }) => {
-          const currentPatternIndex = Number(Object.keys(flash));
-          delay(() => {
-            setFlash((prevState) => {
-              const newPatternIndex = currentPatternIndex + 1;
-              return { [newPatternIndex]: pattern[newPatternIndex] };
-            });
-          }, 500);
-        };
-        flash({ flash, pattern });
+      } else if (!isPatternDisplayed) {
+        const currentPatternIndex = Number(Object.keys(flash));
+        delay(() => {
+          setFlash((prevState) => {
+            const newPatternIndex = currentPatternIndex + 1;
+            // debugger;
+            return { [newPatternIndex]: pattern[newPatternIndex] };
+          });
+        }, 500);
       }
     }
-  }, [flash, pattern]);
+  }, [flash, pattern, isPatternDisplayed]);
 
   useEffect(() => {
     if (isGameStarted && winOrLoss === null) {
@@ -113,6 +105,7 @@ function App() {
         setIsGameStarted(false);
         setIsPatternDisplayed(false);
         setFlash({});
+        debugger;
         setPattern({});
       }, 8000);
       return () => {
@@ -122,6 +115,7 @@ function App() {
       setIsGameStarted(false);
       setIsPatternDisplayed(false);
       setFlash({});
+      debugger;
       setPattern({});
     }
   }, [isGameStarted, winOrLoss]);
@@ -147,6 +141,12 @@ function App() {
       setWinOrLoss(validateClicks({ pattern, colorsClicked }));
     }
   }, [pattern, colorsClicked, winOrLoss]);
+
+  const getButtonControlClassName = ({ color = '' }) => {
+    return `button-control ${color} ${
+      Object.values(flash)[0] === color ? 'flash' : null
+    }`;
+  };
 
   const handlePlayClick = () => {
     const newPattern = generatePattern({});
@@ -175,7 +175,6 @@ function App() {
               disabled={isGameStarted && !isPatternDisplayed}
               className={getButtonControlClassName({
                 color,
-                flash,
               })}
               key={color}
               onClick={() => {
