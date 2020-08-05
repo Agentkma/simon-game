@@ -30,9 +30,9 @@ const generatePattern = ({ numberOfFlashes = 4 }) => {
   return patternMap;
 };
 
-const getButtonControlClassName = ({ color = '', isFlashing }) => {
+const getButtonControlClassName = ({ color = '', flash }) => {
   return `button-control ${color} ${
-    Object.values(isFlashing)[0] === color ? 'isFlashing' : null
+    Object.values(flash)[0] === color ? 'flash' : null
   }`;
 };
 
@@ -73,38 +73,38 @@ const getPlayButtonText = ({ isGameStarted, isPatternDisplayed }) => {
 function App() {
   const [isGameStarted, setIsGameStarted] = useState(false);
   const [winOrLoss, setWinOrLoss] = useState(null);
-  const [isFlashing, setIsFlashing] = useState({});
+  const [flash, setFlash] = useState({});
   const [pattern, setPattern] = useState({});
   const [colorsClicked, setColorsClicked] = useState([]);
   const [isPatternDisplayed, setIsPatternDisplayed] = useState(false);
 
   useEffect(() => {
     if (!isEmpty(pattern)) {
-      setIsFlashing({ 0: pattern[0] });
+      setFlash({ 0: pattern[0] });
     }
   }, [pattern]);
 
   useEffect(() => {
-    if (!isEmpty(isFlashing)) {
-      const currentPatternIndex = Number(Object.keys(isFlashing));
+    if (!isEmpty(flash)) {
+      const currentPatternIndex = Number(Object.keys(flash));
 
       if (currentPatternIndex === Object.values(pattern).length - 1) {
         setIsPatternDisplayed((prevState) => true);
         return;
       } else {
-        const flash = ({ isFlashing, pattern }) => {
-          const currentPatternIndex = Number(Object.keys(isFlashing));
+        const flash = ({ flash, pattern }) => {
+          const currentPatternIndex = Number(Object.keys(flash));
           delay(() => {
-            setIsFlashing((prevState) => {
+            setFlash((prevState) => {
               const newPatternIndex = currentPatternIndex + 1;
               return { [newPatternIndex]: pattern[newPatternIndex] };
             });
           }, 500);
         };
-        flash({ isFlashing, pattern });
+        flash({ flash, pattern });
       }
     }
-  }, [isFlashing, pattern]);
+  }, [flash, pattern]);
 
   useEffect(() => {
     if (isGameStarted && winOrLoss === null) {
@@ -112,7 +112,7 @@ function App() {
         setWinOrLoss((prevState) => false);
         setIsGameStarted(false);
         setIsPatternDisplayed(false);
-        setIsFlashing(false);
+        setFlash({});
         setPattern({});
       }, 8000);
       return () => {
@@ -121,7 +121,7 @@ function App() {
     } else if (winOrLoss !== null) {
       setIsGameStarted(false);
       setIsPatternDisplayed(false);
-      setIsFlashing(false);
+      setFlash({});
       setPattern({});
     }
   }, [isGameStarted, winOrLoss]);
@@ -175,7 +175,7 @@ function App() {
               disabled={isGameStarted && !isPatternDisplayed}
               className={getButtonControlClassName({
                 color,
-                isFlashing,
+                flash,
               })}
               key={color}
               onClick={() => {
@@ -190,7 +190,7 @@ function App() {
               isGameStarted,
               isPatternDisplayed,
             })}
-            disabled={isGameStarted && !isFlashing}
+            disabled={isGameStarted && !flash}
             onClick={handlePlayClick}
           >
             {getPlayButtonText({
